@@ -9,10 +9,12 @@ class Todo {
         this.todoData = new Map(JSON.parse(localStorage.getItem('toDoList')));
     }
 
+    //Добавление в localStorage
     addToStorage() {
         localStorage.setItem('toDoList', JSON.stringify([...this.todoData]));
     }
 
+    //Отрисовка элементов
     render() {
         this.todoList.textContent = '';
         this.todoCompleted.textContent = '';
@@ -20,6 +22,7 @@ class Todo {
         this.addToStorage();
     }
 
+    //Создание элемента
     createItem(todo) {
         const li = document.createElement('li');
         li.classList.add('todo-item');
@@ -27,6 +30,7 @@ class Todo {
         li.insertAdjacentHTML('beforeend', `
       <span class="text-todo">${todo.value}</span>
       <div class="todo-buttons">
+        <button class="todo-edit"></button>
         <button class="todo-remove"></button>
         <button class="todo-complete"></button>
       </div>
@@ -38,6 +42,7 @@ class Todo {
         }
     }
 
+    //Добавление дела
     addTodo(event) {
         event.preventDefault();
         if (this.input.value.trim()) {
@@ -54,21 +59,25 @@ class Todo {
         }
     }
 
+    //Генерация ключей
     generateKey() {
         return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     }
 
-    deleteItem(targetKey) {
+    //Удаление дела
+    deleteItem(targetItem) {
+        const targetKey = targetItem.key;
         for (const key of this.todoData.keys()) {
             if (targetKey === key) {
                 this.todoData.delete(targetKey);
             }
         }
-
         this.render();
     }
 
-    completedItem(targetKey) {
+    //Выполнение дела
+    completedItem(targetItem) {
+        const targetKey = targetItem.key;
         for (const [key, value] of this.todoData) {
             if (targetKey === key && value.completed === false) {
                 value.completed = true;
@@ -79,16 +88,56 @@ class Todo {
         this.render();
     }
 
+    //Редактирование дела
+    editItem(targetItem) {
+        const targetKey = targetItem.key;
+        targetItem.contentEditable = 'true';
+        targetItem.addEventListener('blur', () => {
+            for (const [key, value] of this.todoData) {
+                if (targetKey === key) {
+                    value.value = targetItem.textContent.trim();
+                    this.addToStorage();
+                }
+            }
+            targetItem.contentEditable = 'false';
+        });
+    }
+
+    //Анимация удаления дела
+    animationDeleteItem(targetItem) {
+        targetItem.style.transitionProperty = 'opacity';
+        targetItem.style.transitionDuration = '0.5s';
+        targetItem.style.opacity = 0;
+    }
+
+    //Анимация переноса дела из списка в список
+    animateCompleteItem(targetItem) {
+        targetItem.style.transitionProperty = 'all';
+        targetItem.style.transitionDuration = '0.5s';
+        targetItem.style.opacity = 0;
+        targetItem.style.transform = 'translateY(50%)';
+    }
+
+    //Обработчики событий
     handler() {
         document.querySelector('.todo-container').addEventListener('click', event => {
             event.preventDefault();
             const target = event.target;
             if (target.matches('.todo-complete')) {
-                target.key = target.closest('.todo-item').key;
-                this.completedItem(target.key);
+                const targetItem = target.closest('.todo-item');
+                this.animateCompleteItem(targetItem);
+                setTimeout(() => {
+                    this.completedItem(targetItem);
+                }, 500);
             } else if (target.matches('.todo-remove')) {
-                target.key = target.closest('.todo-item').key;
-                this.deleteItem(target.key);
+                const targetItem = target.closest('.todo-item');
+                this.animationDeleteItem(targetItem);
+                setTimeout(() => {
+                    this.deleteItem(targetItem);
+                }, 500);
+            } else if (target.matches('.todo-edit')) {
+                const targetItem = target.closest('.todo-item');
+                this.editItem(targetItem);
             }
         });
     }
